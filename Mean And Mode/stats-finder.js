@@ -36,7 +36,7 @@ function statsFinder(array) {
 
   function backwardCounter(array, idx, value) {
     let acc = 1;
-    if (!repeatedNumbers.has(value)) {
+    if (!repeatedNumbers.has(value) && idx > 0) {
       while (idx--) {
         array[idx] === value ? acc++ : ''
       }
@@ -58,6 +58,5 @@ function statsFinder(array) {
       }
     }
   }
-
   return [mean, mode]
 }
