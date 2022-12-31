@@ -77,10 +77,10 @@ class LinkedList {
       if (newNode.prev) newNode.prev.next = newNode
       else this.#firstElement = newNode
       this.#length++
+      return this
     } else {
       console.warn(`There is no node at index ${position}`)
     }
-    return this
   }
 
   #deleteNode(node) {
@@ -94,12 +94,19 @@ class LinkedList {
     return [prev, next]
   }
 
-  remove(position) {
-    const node = this.#getNode(position)
+  #privateRemove(position, nodeRef = null) {
+    const node = nodeRef || this.#getNode(position)
     if (node) {
       this.#deleteNode(node)
+    } else {
+      console.warn(`There is no node at index ${position}`)
     }
     return node
+  }
+
+  remove(position) {
+    const node = this.#privateRemove(position)
+    if (node) return node.value
   }
 
   addMany(array) {
@@ -112,12 +119,12 @@ class LinkedList {
     }
   }
 
-  insertManyBefore(position, array) {
+  #privateInsertManyBefore(position, array, nodeRef = null) {
     if (!Array.isArray(array) || !array.length) {
       const msg = 'The argument passed in the LinkedList.insertManyBefore() method must be an Array and cannot be empty'
       console.warn(msg)
     } else {
-      let node = this.#getNode(position)
+      let node = nodeRef || this.#getNode(position)
       if (node) {
         let i = array.length
         while(i--) {
@@ -130,11 +137,16 @@ class LinkedList {
           this.#length++
           node = newNode
         }
+        return node
       } else {
         console.warn(`There is no node at index ${position}`)
       }
-      return this
     }
+  }
+
+  insertManyBefore(position, array) {
+    const hadItemAdded = this.#privateInsertManyBefore(position, array)
+    if (hadItemAdded) return this
   }
 
   showMany(start, end) {
@@ -168,7 +180,7 @@ class LinkedList {
     }
   }
 
-  removeMany(start, end) {
+  #privateRemoveMany(start, end, nodeRef = null) {
     const lastIndex = this.#length - 1
     if (
       end > start &&
@@ -177,28 +189,36 @@ class LinkedList {
     ) {
       let i = (end - start) + 1
       const removed = new Array(i)
+      let lastNodeRemoved = null
       if ((lastIndex - end) <= start) {
-        let node = this.#getNode(end)
+        let node = nodeRef || this.#getNode(end)
         while(i--) {
           const prev = this.#deleteNode(node)[0]
-          removed[i] = node.value
+          removed[i] = node
           node = prev
         }
+        lastNodeRemoved = removed[(end - start)]
       } else {
-        let node = this.#getNode(start)
+        let node = nodeRef || this.#getNode(start)
         let j = 0
         while(j < i) {
           const next = this.#deleteNode(node)[1]
-          removed[j] = node.value
+          removed[j] = node
           node = next
           j++
         }
+        lastNodeRemoved = removed[(end - start)]
       }
-      return removed
+      return [removed.map(node => node.value), lastNodeRemoved]
     } else {
       const msg = 'The "start" argument in LinkedList.removeMany() must be greater than or equal to zero and less than the "end" argument, and the "end" argument must be less than or equal to the last index'
       console.warn(msg)
     }
+  }
+
+  removeMany(start, end) {
+    const removed = this.#privateRemoveMany(start, end)
+    if (removed) return removed[0]
   }
 
   splice(idx, deleteCount, ...rest) {
@@ -210,7 +230,7 @@ class LinkedList {
       if (rest.length) {
         if (idx === this.#length) this.addMany(rest)
         else this.insertManyBefore(idx, rest) 
-        return
+        return this
       } 
     }
     if (idx > this.#length - 1 || idx < 0) {
@@ -223,17 +243,20 @@ class LinkedList {
       if (lastIdxToDelete >= this.#length) 
         lastIdxToDelete = this.#length - 1
 
-      if (idx === lastIdxToDelete) this.remove(idx)
-      else this.removeMany(idx, lastIdxToDelete)
+      let lastNodeRemoved = null
+      if (idx === lastIdxToDelete) lastNodeRemoved = this.#privateRemove(idx)
+      else lastNodeRemoved = this.#privateRemoveMany(idx, lastIdxToDelete)[1]
 
       if (rest.length) {
-        if (this.#length) this.insertManyBefore(idx, rest) 
+        if (lastNodeRemoved?.next) 
+          this.#privateInsertManyBefore(idx, rest, lastNodeRemoved.next) 
         else this.addMany(rest)
       } 
-      return
+      return this
     }
 
     if (deleteCount < 0) {
+      let lastNodeRemoved = null
       let position = idx + deleteCount + 1
       if (position < 0) {
         const endToBack = this.#length + position
@@ -248,12 +271,16 @@ class LinkedList {
           else this.removeMany(endToBack-idx-1, lastIdx-idx-1)
         }
         if (rest.length) this.addMany(rest) 
-        return
-      } else if (position === idx) this.remove(idx)
-      else this.removeMany(position, idx)
+        return this
+      } else if (position === idx) lastNodeRemoved = this.#privateRemove(idx)
+      else lastNodeRemoved = this.#privateRemoveMany(position, idx)[1]
 
-      if (this.#length) this.insertManyBefore(idx, rest)
-      else this.addMany(rest)
+      if (rest.length) {
+        if (lastNodeRemoved?.next)
+          this.#privateInsertManyBefore(position, rest, lastNodeRemoved.next)
+        else this.addMany(rest)
+      }
+      return this
     }
   }
 
