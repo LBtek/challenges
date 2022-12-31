@@ -177,7 +177,7 @@ class LinkedList {
     ) {
       let i = (end - start) + 1
       const removed = new Array(i)
-      if ((lastIndex - end) < start) {
+      if ((lastIndex - end) <= start) {
         let node = this.#getNode(end)
         while(i--) {
           const prev = this.#deleteNode(node)[0]
@@ -198,6 +198,62 @@ class LinkedList {
     } else {
       const msg = 'The "start" argument in LinkedList.removeMany() must be greater than or equal to zero and less than the "end" argument, and the "end" argument must be less than or equal to the last index'
       console.warn(msg)
+    }
+  }
+
+  splice(idx, deleteCount, ...rest) {
+    if ((this.#length === 0 && idx > 0) || idx > this.#length) {
+      console.warn(`There is no node at index ${idx}`)
+      return
+    }
+    if (deleteCount === 0) {
+      if (rest.length) {
+        if (idx === this.#length) this.addMany(rest)
+        else this.insertManyBefore(idx, rest) 
+        return
+      } 
+    }
+    if (idx > this.#length - 1 || idx < 0) {
+      console.warn(`There is no node at index ${idx}`)
+      return
+    }
+
+    if (deleteCount > 0) {
+      let lastIdxToDelete = idx + deleteCount - 1
+      if (lastIdxToDelete >= this.#length) 
+        lastIdxToDelete = this.#length - 1
+
+      if (idx === lastIdxToDelete) this.remove(idx)
+      else this.removeMany(idx, lastIdxToDelete)
+
+      if (rest.length) {
+        if (this.#length) this.insertManyBefore(idx, rest) 
+        else this.addMany(rest)
+      } 
+      return
+    }
+
+    if (deleteCount < 0) {
+      let position = idx + deleteCount + 1
+      if (position < 0) {
+        const endToBack = this.#length + position
+        position = 0
+        if (endToBack <= idx) {
+          this.reset()
+        } else {
+          const lastIdx = this.#length - 1
+          if (idx === position) this.remove(idx)
+          else this.removeMany(position, idx)
+          if (endToBack === lastIdx) this.remove(endToBack-idx-1)
+          else this.removeMany(endToBack-idx-1, lastIdx-idx-1)
+        }
+        if (rest.length) this.addMany(rest) 
+        return
+      } else if (position === idx) this.remove(idx)
+      else this.removeMany(position, idx)
+
+      if (this.#length) this.insertManyBefore(idx, rest)
+      else this.addMany(rest)
     }
   }
 
