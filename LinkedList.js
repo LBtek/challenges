@@ -137,7 +137,7 @@ class LinkedList {
           this.#length++
           node = newNode
         }
-        return node
+        return node // last node added
       } else {
         console.warn(`There is no node at index ${position}`)
       }
@@ -149,7 +149,7 @@ class LinkedList {
     if (hadItemAdded) return this
   }
 
-  showMany(start, end) {
+  list(start, end) {
     const lastIndex = this.#length - 1
     if (
       end > start &&
@@ -175,7 +175,7 @@ class LinkedList {
       }
       return arr
     } else {
-      const msg = 'The "start" argument in LinkedList.showMany() must be greater than or equal to zero and less than the "end" argument, and the "end" argument must be less than or equal to the last index'
+      const msg = 'The "start" argument in LinkedList.list() must be greater than or equal to zero and less than the "end" argument, and the "end" argument must be less than or equal to the last index'
       console.warn(msg)
     }
   }
@@ -221,65 +221,112 @@ class LinkedList {
     if (removed) return removed[0]
   }
 
-  splice(idx, deleteCount, ...rest) {
-    if ((this.#length === 0 && idx > 0) || idx > this.#length) {
-      console.warn(`There is no node at index ${idx}`)
-      return
-    }
-    if (deleteCount === 0) {
-      if (rest.length) {
-        if (idx === this.#length) this.addMany(rest)
-        else this.insertManyBefore(idx, rest) 
-        return this
+  splice(idx, deleteCount, arrayOrItem, startAfter = false, circulate = false) {
+    if (typeof startAfter !== 'boolean' || typeof circulate !== 'boolean') {
+      if (startAfter !== 0 && startAfter !== 1) {
+        console.warn('Argument "startAfter" must be a boolean or 0 or 1')
+        return
+      }
+      if (circulate !== 0 && circulate !== 1) {
+        console.warn('Argument "circulate" must be a boolean or 0 or 1')
+        return
       } 
     }
-    if (idx > this.#length - 1 || idx < 0) {
-      console.warn(`There is no node at index ${idx}`)
-      return
-    }
 
-    if (deleteCount > 0) {
-      let lastIdxToDelete = idx + deleteCount - 1
-      if (lastIdxToDelete >= this.#length) 
-        lastIdxToDelete = this.#length - 1
+    let items = []
+    if (Array.isArray(arrayOrItem)) {
+      if (!arrayOrItem.length) {
+        console.warn(`There must be at least one item in the array to be added`)
+        return
+      } else items = arrayOrItem
+    } else items.push(arrayOrItem)
 
-      let lastNodeRemoved = null
-      if (idx === lastIdxToDelete) lastNodeRemoved = this.#privateRemove(idx)
-      else lastNodeRemoved = this.#privateRemoveMany(idx, lastIdxToDelete)[1]
-
-      if (rest.length) {
-        if (lastNodeRemoved?.next) 
-          this.#privateInsertManyBefore(idx, rest, lastNodeRemoved.next) 
-        else this.addMany(rest)
-      } 
-      return this
-    }
+    let id = idx < 0 ? this.length + idx : idx
 
     if (deleteCount < 0) {
-      let lastNodeRemoved = null
-      let position = idx + deleteCount + 1
+      id = startAfter ? id-1 : id
+      let position = id + deleteCount + 1
       if (position < 0) {
         const endToBack = this.#length + position
         position = 0
-        if (endToBack <= idx) {
-          this.reset()
-        } else {
-          const lastIdx = this.#length - 1
-          if (idx === position) this.remove(idx)
-          else this.removeMany(position, idx)
-          if (endToBack === lastIdx) this.remove(endToBack-idx-1)
-          else this.removeMany(endToBack-idx-1, lastIdx-idx-1)
+        if (circulate) {
+          if (endToBack <= id) {
+            this.reset()
+          } else {
+            const lastIdx = this.#length - 1
+            if (id === position) this.remove(id)
+            else this.removeMany(position, id)
+            if (endToBack === lastIdx) this.remove(endToBack-id-1)
+            else this.removeMany(endToBack-id-1, lastIdx-id-1)
+          }
+          if (items.length) this.addMany(items) 
+          return this
         }
-        if (rest.length) this.addMany(rest) 
-        return this
-      } else if (position === idx) lastNodeRemoved = this.#privateRemove(idx)
-      else lastNodeRemoved = this.#privateRemoveMany(position, idx)[1]
-
-      if (rest.length) {
-        if (lastNodeRemoved?.next)
-          this.#privateInsertManyBefore(position, rest, lastNodeRemoved.next)
-        else this.addMany(rest)
       }
+      if (id < 0) {
+        console.warn(`There is no node at index ${id}`)
+        return
+      }
+      let lastNodeRemoved = null
+      if (position === id) lastNodeRemoved = this.#privateRemove(id)
+      else lastNodeRemoved = this.#privateRemoveMany(position, id)[1]
+
+      if (items.length) {
+        if (lastNodeRemoved?.next)
+          this.#privateInsertManyBefore(position, items, lastNodeRemoved.next)
+        else this.addMany(items)
+      }
+      return this
+    }
+
+    id = startAfter ? id+1 : id
+    if (id > this.#length) {
+      console.warn(`There is no node at index ${id-1}`)
+      return
+    }
+
+    if (deleteCount === 0) {
+      if (items.length) {
+        if (id === this.#length) this.addMany(items)
+        else this.insertManyBefore(id, items) 
+        return this
+      } 
+    }
+
+    if (deleteCount > 0) {
+      const lastIdx = this.#length - 1
+      let lastIdxToDelete = id + deleteCount - 1
+      if (lastIdxToDelete >= this.#length)  {
+        if (circulate) {
+          lastIdxToDelete -= this.#length
+          if (lastIdxToDelete >= id) {
+            this.reset()
+            if (items.length) this.addMany(items)
+          } else {
+            if (id === lastIdx) this.remove(id)
+            else this.removeMany(id, lastIdx)
+            let lastNodeRemoved = null
+            if (lastIdxToDelete === 0) lastNodeRemoved = this.#privateRemove(0)
+            else lastNodeRemoved = this.#privateRemoveMany(0, lastIdxToDelete)[1]
+            if (items.length) this.#privateInsertManyBefore(1, items, lastNodeRemoved.next)
+          }
+          return this
+        } else lastIdxToDelete = lastIdx
+      }
+
+      if (id > lastIdx) {
+        console.warn(`There is no node at index ${id}`)
+        return
+      }
+      let lastNodeRemoved = null
+      if (id === lastIdxToDelete) lastNodeRemoved = this.#privateRemove(id)
+      else lastNodeRemoved = this.#privateRemoveMany(id, lastIdxToDelete)[1]
+
+      if (items.length) {
+        if (lastNodeRemoved?.next) 
+          this.#privateInsertManyBefore(idx, items, lastNodeRemoved.next) 
+        else this.addMany(items)
+      } 
       return this
     }
   }
