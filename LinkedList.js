@@ -23,6 +23,23 @@ class LinkedList {
     return this.#length
   }
 
+  constructor() {
+    Object.defineProperties(this, {
+      firstElement: {
+        get() { return this.#firstElement?.value || null },
+        enumerable: true
+      },
+      lastElement: {
+        get() { return this.#lastElement?.value || null },
+        enumerable: true
+      },
+      length: {
+        get() { return this.#length; },
+        enumerable: true
+      }
+    })
+  }
+
   #getNode(position) {
     if (position >= 0 && position < this.length) {
       let i = this.#length - 1 
@@ -349,5 +366,14 @@ class LinkedList {
     this.#length = 0
 
     return this
+  }
+
+  toString() {
+    if (!this.length) return JSON.stringify(this)
+    return JSON.stringify({...this.listAll()})
+  }
+
+  valueOf() {
+    return this.toString()
   }
 }
