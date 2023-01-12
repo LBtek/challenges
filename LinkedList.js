@@ -6,10 +6,11 @@ class NodeLinkedList {
   }
 }
 
-class LinkedList {
+export class LinkedList {
   #firstElement = null
   #lastElement = null
   #length = 0
+  #stringify = null
 
   get firstElement() {
     return this.#firstElement?.value || null
@@ -23,7 +24,15 @@ class LinkedList {
     return this.#length
   }
 
-  constructor() {
+  set stringify(stringifyFn) {
+    if (typeof stringifyFn === 'function')
+      if (typeof stringifyFn(Math.random()) === 'string') 
+        this.#stringify = stringifyFn
+  }
+
+  constructor(stringifyFn = null) {
+    if (stringifyFn) this.stringify = stringifyFn
+    
     Object.defineProperties(this, {
       firstElement: {
         get() { return this.#firstElement?.value || null },
@@ -370,7 +379,8 @@ class LinkedList {
 
   toString() {
     if (!this.length) return JSON.stringify(this)
-    return JSON.stringify({...this.listAll()})
+    if (this.#stringify) return this.#stringify({...this.listAll()})
+    else return JSON.stringify({...this.listAll()})
   }
 
   valueOf() {
