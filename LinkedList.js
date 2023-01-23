@@ -50,9 +50,13 @@ export class LinkedList {
   }
 
   #getNode(position) {
+    if (!Number.isInteger(position)) {
+      console.warn('Argument "position" must be integer')
+      return
+    }
     if (position >= 0 && position < this.length) {
       let i = this.#length - 1 
-      if (position > (i / 2)) {
+      if (position >= Math.ceil(i/2)) {
         let node = this.#lastElement
         while(i !== position) {
           node = node.prev
@@ -83,7 +87,7 @@ export class LinkedList {
       return this
 
     if (typeof value === 'string' && value.trim() === '') {
-      console.warn("Value can't be empty")
+      console.warn("Value cannot be empty")
       return this
     }
 
@@ -255,7 +259,7 @@ export class LinkedList {
     if (removed) return removed[0]
   }
 
-  splice(idx, deleteCount, arrayOrItem, startAfter = false, circulate = false) {
+  splice(idx, deleteCount, itemOrArrayItemsToAdd = null, startAfter = false, circulate = false) {
     if (typeof startAfter !== 'boolean' || typeof circulate !== 'boolean') {
       if (startAfter !== 0 && startAfter !== 1) {
         console.warn('Argument "startAfter" must be a boolean or 0 or 1')
@@ -267,13 +271,17 @@ export class LinkedList {
       } 
     }
 
-    let items = []
-    if (Array.isArray(arrayOrItem)) {
-      if (!arrayOrItem.length) {
+    let itemsToAdd = []
+
+    if (Array.isArray(itemOrArrayItemsToAdd)) {
+      if (!itemOrArrayItemsToAdd.length) {
         console.warn(`There must be at least one item in the array to be added`)
         return
-      } else items = arrayOrItem
-    } else items.push(arrayOrItem)
+      } 
+      else itemsToAdd = itemOrArrayItemsToAdd
+    } 
+    else if (itemOrArrayItemsToAdd) 
+      itemsToAdd.push(itemOrArrayItemsToAdd)
 
     let id = idx < 0 ? this.length + idx : idx
 
@@ -293,7 +301,7 @@ export class LinkedList {
             if (endToBack === lastIdx) this.remove(endToBack-id-1)
             else this.removeMany(endToBack-id-1, lastIdx-id-1)
           }
-          if (items.length) this.addMany(items) 
+          if (itemsToAdd.length) this.addMany(itemsToAdd) 
           return this
         }
       }
@@ -305,10 +313,10 @@ export class LinkedList {
       if (position === id) lastNodeRemoved = this.#privateRemove(id)
       else lastNodeRemoved = this.#privateRemoveMany(position, id)[1]
 
-      if (items.length) {
+      if (itemsToAdd.length) {
         if (lastNodeRemoved?.next)
-          this.#privateInsertManyBefore(position, items, lastNodeRemoved.next)
-        else this.addMany(items)
+          this.#privateInsertManyBefore(position, itemsToAdd, lastNodeRemoved.next)
+        else this.addMany(itemsToAdd)
       }
       return this
     }
@@ -320,9 +328,9 @@ export class LinkedList {
     }
 
     if (deleteCount === 0) {
-      if (items.length) {
-        if (id === this.#length) this.addMany(items)
-        else this.insertManyBefore(id, items) 
+      if (itemsToAdd.length) {
+        if (id === this.#length) this.addMany(itemsToAdd)
+        else this.insertManyBefore(id, itemsToAdd) 
         return this
       } 
     }
@@ -335,14 +343,14 @@ export class LinkedList {
           lastIdxToDelete -= this.#length
           if (lastIdxToDelete >= id) {
             this.reset()
-            if (items.length) this.addMany(items)
+            if (itemsToAdd.length) this.addMany(itemsToAdd)
           } else {
             if (id === lastIdx) this.remove(id)
             else this.removeMany(id, lastIdx)
             let lastNodeRemoved = null
             if (lastIdxToDelete === 0) lastNodeRemoved = this.#privateRemove(0)
             else lastNodeRemoved = this.#privateRemoveMany(0, lastIdxToDelete)[1]
-            if (items.length) this.#privateInsertManyBefore(1, items, lastNodeRemoved.next)
+            if (itemsToAdd.length) this.#privateInsertManyBefore(1, itemsToAdd, lastNodeRemoved.next)
           }
           return this
         } else lastIdxToDelete = lastIdx
@@ -356,10 +364,10 @@ export class LinkedList {
       if (id === lastIdxToDelete) lastNodeRemoved = this.#privateRemove(id)
       else lastNodeRemoved = this.#privateRemoveMany(id, lastIdxToDelete)[1]
 
-      if (items.length) {
+      if (itemsToAdd.length) {
         if (lastNodeRemoved?.next) 
-          this.#privateInsertManyBefore(idx, items, lastNodeRemoved.next) 
-        else this.addMany(items)
+          this.#privateInsertManyBefore(id, itemsToAdd, lastNodeRemoved.next) 
+        else this.addMany(itemsToAdd)
       } 
       return this
     }
@@ -385,23 +393,34 @@ export class LinkedList {
     return this
   }
 
-  toString(separator = ',') {
-    if (this.#stringify && this.#length) {
-      const list = this.#stringify(this.listAll())
-  
-      return list.slice( 1, list.length - 1 ).replace(',', separator)
+  toString(separator = '<->') {
+    if (typeof separator !== 'string') {
+      console.warn('Type of "separator" argument must be string')
+      return
     }
 
-    return this.listAll().join(separator)
+    if (!this.#length) 
+      return '[empty LinkedList object]'
+
+    const stringify = this.#stringify || JSON.stringify
+    let node = this.#lastElement
+    let i = this.#length
+    let res = ''
+    while(i--) {
+      res += separator + stringify(node.value)
+      node = node.prev
+    }
+
+    return res.slice(separator.length)
   }
 
   valueOf() {
     if (!this.length) 
-      return JSON.stringify(this)
+      return 'LinkedList ' + JSON.stringify(this)
 
     if (this.#stringify) 
-      return this.#stringify({...this.listAll()})
+      return 'LinkedList ' + this.#stringify({...this.listAll()})
     
-    return JSON.stringify({...this.listAll().map(e => e instanceof Array ? e : e.toString())})
+    return 'LinkedList ' + JSON.stringify({...this.listAll()})
   }
 }
